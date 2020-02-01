@@ -1,0 +1,254 @@
+package ahorcado.server.controllador;
+
+import ahorcado.server.modelo.Peticion;
+import ahorcado.server.modelo.Rol;
+import ahorcado.server.modelo.Usuario;
+import ahorcado.server.utils.Metodo;
+import ahorcado.server.utils.Utils;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.query.Query;
+import org.json.simple.JSONObject;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+
+public class UsuariosManager extends Thread implements IManejador {
+
+    public static final HashMap<String, ArrayList<String>> peticionesEnrutables = new HashMap<>();
+    private Session session;
+    private Runnable funcionAEjecutar;
+
+    static {
+        peticionesEnrutables.put("POST", new ArrayList<String>(){{
+            add("registro");
+            add("login");
+        }});
+    }
+
+
+    public UsuariosManager(){
+        this.session = Utils.obtenerSession();
+    }
+
+
+    @Override
+    public final boolean contieneRecurso(Peticion peticion){
+
+        String metodo = peticion.getMetodo().name();
+
+        // Comprobamos que manejemos alguno de los métodos solicitados y, dependiendo de cada método,
+        // una determinada acción
+        if (peticionesEnrutables.containsKey(metodo)){
+            if (peticionesEnrutables.get(metodo).contains(peticion.getAccion())){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void manejarConexionEntrante(Peticion peticion) {
+
+        switch (peticion.getMetodo()){
+
+            // Acciones con el método POST
+            case POST:
+                switch (peticion.getAccion()){
+                    case "registro":
+                        funcionAEjecutar = new Runnable() {
+                            @Override
+                            public void run() {
+                                registrar(peticion);
+                            }
+                        };
+                        break;
+
+                    case "login":
+                        funcionAEjecutar = new Runnable() {
+                            @Override
+                            public void run() {
+                                loguear(peticion);
+                            }
+                        };
+                        break;
+                }
+                break;
+        }
+
+        // Ejecutamos la acción en un hilo nuevo
+        this.start();
+    }
+
+    @Override
+    public void run() {
+        funcionAEjecutar.run();
+    }
+
+
+    public void registrar(Peticion peticion){
+
+        JSONObject respuesta = new JSONObject();
+
+        // Comprobamos que la petición contenga los campos necesarios
+        if (!contieneCamposNecesariosRegistro(peticion)){
+            respuesta.put("codigo",400);
+            respuesta.put("msg", "La petición no contiene los campos necesarios");
+            peticion.setRespuesta(respuesta);
+            peticion.finalizar();
+            return;
+        }
+
+        // Comprobamos que los valores de los argumentos sean válidos (tamanio contrasenia... etc)
+        if (!comprobarValoresCorrectosRegistro(peticion.getArgumentos())){
+            respuesta.put("codigo","400");
+            respuesta.put("msg", "Los argumentos no cumplen con los requisitos");
+            peticion.setRespuesta(respuesta);
+            peticion.finalizar();
+            return;
+        }
+
+        Transaction transaction = null;
+
+        try{
+
+            // Comenzamos una transacción
+            transaction = session.beginTransaction();
+
+            // Obtenemos los campos importantes del usuario
+            HashMap<String, String> args = peticion.getArgumentos();
+            String nombre = args.get("nombre");
+            String contrasenia = args.get("contrasenia");
+
+            // Creamos el usuario con los datos requeridos
+            Usuario usuario = new Usuario(nombre, contrasenia, Rol.from(Rol.Tipo.NORMAL));
+
+            // Guardamos al empleado
+            session.save(usuario);
+
+            // Guardamos punto de control
+            transaction.commit();
+
+        }catch (Exception e){
+            if (transaction != null){
+                transaction.rollback();
+            }
+            e.printStackTrace();
+            peticion.finalizar();
+        }
+
+        // Creamos la respuesta
+        respuesta.put("codigo",200);
+        respuesta.put("msg","");
+        peticion.setRespuesta(respuesta);
+        peticion.finalizar();
+
+    }
+
+    public void loguear(Peticion peticion){
+
+        JSONObject respuesta = new JSONObject();
+
+        // Comprobamos que la petición contenga los datos necesario
+        if (!contieneCamposNecesariosLoguin(peticion)){
+            respuesta.put("codigo",400);
+            respuesta.put("msg", "La petición no contiene los campos necesarios");
+            peticion.setRespuesta(respuesta);
+            peticion.finalizar();
+            return;
+        }
+
+        Transaction transaction = null;
+
+        try{
+
+            String nombreUsuario = peticion.getArgumentos().get("nombre");
+            String contrasenia = peticion.getArgumentos().get("contrasenia");
+
+            // Comenzamos una transacción
+            transaction = session.beginTransaction();
+
+            Query query = session.createNamedQuery("FROM Usuario WHERE nombre = :nombre AND contrasenia = :contrasenia");
+            query.setParameter("nombre", nombreUsuario);
+            query.setParameter("contrasenia", contrasenia);
+
+            Usuario usuario = (Usuario) query.getSingleResult();
+
+            // Guardamos punto de control
+            transaction.commit();
+
+            if (usuario != null){
+                // Guardamos el login del usuario
+                Juego.anadirJugadorLogueado(usuario);
+                respuesta.put("codigo","200");
+                respuesta.put("msg","");
+                peticion.setRespuesta(respuesta);
+                peticion.finalizar();
+            }
+
+            // No se ha encontrado ningún usuario con esa combinación
+            else {
+                respuesta.put("codigo",404);
+                respuesta.put("msg","No se ha encontrado ningún usuario con esa combinación");
+                peticion.setRespuesta(respuesta);;
+                peticion.finalizar();
+            }
+
+        }catch (Exception e){
+            if (transaction != null){
+                transaction.rollback();
+            }
+            e.printStackTrace();
+            peticion.finalizar();
+        }
+    }
+
+
+    private boolean contieneCamposNecesariosRegistro(Peticion peticion){
+
+        if (peticion == null) return false;
+
+        // El método tiene que ser POST
+        if (peticion.getMetodo() != Metodo.POST){
+            return false;
+        }
+
+        // Tiene que tener en los argumentos un nombre y una contrasenia
+        HashMap<String, String> args = peticion.getArgumentos();
+        if (!args.containsKey("nombre") || !args.containsKey("contrasenia")){
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean comprobarValoresCorrectosRegistro(HashMap<String, String> args) {
+
+        String nombreUsuario = args.get("nombre");
+        String contrasenia = args.get("contrasenia");
+
+        if(nombreUsuario.length() < 3) return false;
+        if (contrasenia.length() < 3) return false;
+
+        return true;
+    }
+
+
+    private boolean contieneCamposNecesariosLoguin(Peticion peticion){
+
+        if (peticion == null) return false;
+
+        // El método tiene que ser POST
+        if (peticion.getMetodo() != Metodo.POST){
+            return false;
+        }
+
+        // Tiene que tener en los argumentos un nombre y una contrasenia
+        HashMap<String, String> args = peticion.getArgumentos();
+        if (!args.containsKey("nombre") || !args.containsKey("contrasenia")){
+            return false;
+        }
+
+        return true;
+    }
+}

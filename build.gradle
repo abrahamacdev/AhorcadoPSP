@@ -1,0 +1,25 @@
+plugins {
+    id 'java'
+}
+
+group 'abraham.alvarezcruz'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+
+    // https://mvnrepository.com/artifact/com.googlecode.json-simple/json-simple
+    compile group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1.1'
+
+    // https://mvnrepository.com/artifact/mysql/mysql-connector-java
+    compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.18'
+
+    // https://mvnrepository.com/artifact/org.hibernate.orm/hibernate-gradle-plugin
+    compile group: 'org.hibernate.orm', name: 'hibernate-gradle-plugin', version: '6.0.0.Alpha4'
+}
