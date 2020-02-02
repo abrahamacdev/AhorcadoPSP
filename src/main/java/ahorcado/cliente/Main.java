@@ -20,7 +20,11 @@ public class Main {
         ServerMain.levantarServidor();
 
         // Registramos un nuevo usuario
-        main.realizarRegistroCliente();
+        //main.realizarRegistroCliente();
+
+        // Nos logueamos/deslogueamos con el usuario existente
+        main.realizarLoginCliente();
+        main.realizarLogoutCliente();
     }
 
     public void realizarRegistroCliente(){
@@ -44,6 +48,49 @@ public class Main {
         }
 
     }
+
+    public void realizarLoginCliente(){
+
+        InetAddress inetAddress = obtenerDireccionLocal();
+
+        JSONObject jsonPeticion = new JSONObject();
+        jsonPeticion.put("metodo",Metodo.POST.name());
+        jsonPeticion.put("accion","login");
+
+        JSONObject jsonArgs = new JSONObject();
+        jsonArgs.put("nombre","Abraham");
+        jsonArgs.put("contrasenia","1234");
+
+        jsonPeticion.put("args", jsonArgs);
+
+        JSONObject jsonRes = realizarPeticionUDP(inetAddress, Utils.PUERTO_UDP, jsonPeticion);
+
+        if (jsonRes != null){
+            System.out.println("Respuesta del servidor a nuestra petición de loguearnos: " + jsonRes.toJSONString());
+        }
+    }
+
+    public void realizarLogoutCliente(){
+
+        InetAddress inetAddress = obtenerDireccionLocal();
+
+        JSONObject jsonPeticion = new JSONObject();
+        jsonPeticion.put("metodo",Metodo.POST.name());
+        jsonPeticion.put("accion","logout");
+
+        JSONObject jsonArgs = new JSONObject();
+        jsonArgs.put("nombre","Abraham");
+
+        jsonPeticion.put("args", jsonArgs);
+
+        JSONObject jsonRes = realizarPeticionUDP(inetAddress, Utils.PUERTO_UDP, jsonPeticion);
+
+        if (jsonRes != null){
+            System.out.println("Respuesta del servidor a nuestra petición de loguearnos: " + jsonRes.toJSONString());
+        }
+    }
+
+
 
     public static DatagramSocket crearDatagramSocket(){
         try {
@@ -97,7 +144,7 @@ public class Main {
         return null;
     }
 
-    public static JSONObject realizarPeticionUDP(InetAddress direccion, int puerto, JSONObject jsonPeticion){
+    public JSONObject realizarPeticionUDP(InetAddress direccion, int puerto, JSONObject jsonPeticion){
 
         // Step 1: Creamos el socket por el que enviaremos la información
         DatagramSocket datagramSocket = crearDatagramSocket();

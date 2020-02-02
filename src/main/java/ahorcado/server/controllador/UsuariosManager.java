@@ -23,6 +23,7 @@ public class UsuariosManager extends Thread implements IManejador {
         peticionesEnrutables.put("POST", new ArrayList<String>(){{
             add("registro");
             add("login");
+            add("logout");
         }});
     }
 
@@ -68,7 +69,16 @@ public class UsuariosManager extends Thread implements IManejador {
                         funcionAEjecutar = new Runnable() {
                             @Override
                             public void run() {
-                                loguear(peticion);
+                                login(peticion);
+                            }
+                        };
+                        break;
+
+                    case "logout":
+                        funcionAEjecutar = new Runnable() {
+                            @Override
+                            public void run() {
+                                logout(peticion);
                             }
                         };
                         break;
@@ -145,7 +155,7 @@ public class UsuariosManager extends Thread implements IManejador {
 
     }
 
-    public void loguear(Peticion peticion){
+    public void login(Peticion peticion){
 
         JSONObject respuesta = new JSONObject();
 
@@ -168,7 +178,7 @@ public class UsuariosManager extends Thread implements IManejador {
             // Comenzamos una transacción
             transaction = session.beginTransaction();
 
-            Query query = session.createNamedQuery("FROM Usuario WHERE nombre = :nombre AND contrasenia = :contrasenia");
+            Query query = session.createQuery("FROM Usuario WHERE nombre = :nombre AND contrasenia = :contrasenia");
             query.setParameter("nombre", nombreUsuario);
             query.setParameter("contrasenia", contrasenia);
 
@@ -190,6 +200,61 @@ public class UsuariosManager extends Thread implements IManejador {
             else {
                 respuesta.put("codigo",404);
                 respuesta.put("msg","No se ha encontrado ningún usuario con esa combinación");
+                peticion.setRespuesta(respuesta);;
+                peticion.finalizar();
+            }
+
+        }catch (Exception e){
+            if (transaction != null){
+                transaction.rollback();
+            }
+            e.printStackTrace();
+            peticion.finalizar();
+        }
+    }
+
+    public void logout(Peticion peticion){
+        JSONObject respuesta = new JSONObject();
+
+        // Comprobamos que la petición contenga los datos necesario
+        if (!contieneCamposNecesariosLogout(peticion)){
+            respuesta.put("codigo",400);
+            respuesta.put("msg", "La peticion no contiene los campos necesarios");
+            peticion.setRespuesta(respuesta);
+            peticion.finalizar();
+            return;
+        }
+
+        Transaction transaction = null;
+
+        try{
+
+            String nombreUsuario = peticion.getArgumentos().get("nombre");
+
+            // Comenzamos una transacción
+            transaction = session.beginTransaction();
+
+            Query query = session.createQuery("FROM Usuario WHERE nombre = :nombre");
+            query.setParameter("nombre", nombreUsuario);
+
+            Usuario usuario = (Usuario) query.getSingleResult();
+
+            // Guardamos punto de control
+            transaction.commit();
+
+            if (usuario != null && Juego.comprobarJugadorLogueado(usuario)){
+                // Deslogueamos al usuario
+                Juego.eliminarJugadorLogueado(usuario);
+                respuesta.put("codigo","200");
+                respuesta.put("msg","");
+                peticion.setRespuesta(respuesta);
+                peticion.finalizar();
+            }
+
+            // No se ha encontrado ningún usuario con esa combinación
+            else {
+                respuesta.put("codigo",404);
+                respuesta.put("msg","No se ha encontrado ningun usuario con esa combinación o el usuario no se ha logueado aún");
                 peticion.setRespuesta(respuesta);;
                 peticion.finalizar();
             }
@@ -246,6 +311,25 @@ public class UsuariosManager extends Thread implements IManejador {
         // Tiene que tener en los argumentos un nombre y una contrasenia
         HashMap<String, String> args = peticion.getArgumentos();
         if (!args.containsKey("nombre") || !args.containsKey("contrasenia")){
+            return false;
+        }
+
+        return true;
+    }
+
+
+    private boolean contieneCamposNecesariosLogout(Peticion peticion){
+
+        if (peticion == null) return false;
+
+        // El método tiene que ser POST
+        if (peticion.getMetodo() != Metodo.POST){
+            return false;
+        }
+
+        // Tiene que tener en los argumentos un nombre y una contrasenia
+        HashMap<String, String> args = peticion.getArgumentos();
+        if (!args.containsKey("nombre")){
             return false;
         }
 

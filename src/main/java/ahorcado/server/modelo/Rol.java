@@ -13,9 +13,9 @@ public class Rol {
         return new Rol(2, Tipo.NORMAL.name().toLowerCase());
     }
 
-    private Rol(){}
+    public Rol(){}
 
-    private Rol(int id, String nombre){
+    public Rol(int id, String nombre){
         this.id = id;
         this.nombre = nombre;
     }
