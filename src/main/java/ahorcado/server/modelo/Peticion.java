@@ -11,6 +11,7 @@ import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.HashMap;
 import java.util.Set;
 
@@ -19,7 +20,7 @@ public class Peticion {
     private Metodo metodo = null;
     private Protocolo protocolo = null;
     private String accion = "";
-    private HashMap<String, String > argumentos = new HashMap<>();
+    private HashMap<String, String> argumentos = new HashMap<>();
     private JSONObject respuesta = null;
 
     // En el caso de TCP->Socket, UDP->DatagramPacket
@@ -36,16 +37,30 @@ public class Peticion {
     public Peticion(Protocolo protocolo, Object peticionCliente, DatagramSocket buzon, String datos){
         this.protocolo = protocolo;
         this.peticionCliente = peticionCliente;
-        this.buzon = buzon;
+
+        // Si el protocolo es UDP, creamos un buzón para no solapar el que utiliza el hilo principal
+        if (protocolo == Protocolo.UDP){
+            crearBuzonUDP(buzon);
+        }
+
+        // Parseamos los datos de la petición
         parsearDatosJSON(datos);
+    }
+
+    private void crearBuzonUDP(DatagramSocket buzon){
+        synchronized (buzon){
+            try {
+                this.buzon = new DatagramSocket();
+            } catch (SocketException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void parsearDatosJSON(String datos){
 
         try {
             JSONObject jsonObject = (JSONObject) new JSONParser().parse(datos);
-
-            System.out.println(jsonObject.toJSONString());
 
             // Método de la petición
             Metodo tempMetodo = convertirStrToMetodo((String) jsonObject.get("metodo"));
@@ -59,10 +74,14 @@ public class Peticion {
             // Argumentos de la petición
             JSONObject args = (JSONObject) jsonObject.get("args");
 
+            // Si la petición tiene argumentos, los obtendremos todos
+            if (args != null){
 
-            for (String key : ((Set<String>) args.keySet())){
-                argumentos.put(key, (String) args.get(key));
+                for (String key : ((Set<String>) args.keySet())){
+                    argumentos.put(key, (String) args.get(key));
+                }
             }
+
         } catch (ParseException e) {
             e.printStackTrace();
         }
@@ -95,6 +114,7 @@ public class Peticion {
         // Enviamos la respuesta a través del socket
         if (protocolo == Protocolo.TCP){
             Socket socket = (Socket) peticionCliente;
+
             PrintWriter printWriter = null;
             try {
                 printWriter = new PrintWriter(socket.getOutputStream(),true);
@@ -106,10 +126,13 @@ public class Peticion {
                 if (printWriter != null){
                     printWriter.close();
                 }
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
+
+                if (socket != null){
+                    try {
+                        socket.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }
@@ -119,13 +142,21 @@ public class Peticion {
             DatagramPacket datagramPacket = (DatagramPacket) peticionCliente;
             datagramPacket.setData(res);
             try {
-                buzon.send(datagramPacket);
+                synchronized (buzon){
+                    buzon.send(datagramPacket);
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
     }
 
+    @Override
+    public String toString() {
+        return "(Peticion) Método: " + metodo + "\n" +
+                        "Accion: " + accion + "\n" +
+                        "Args: " + argumentos;
+    }
 
     public Metodo getMetodo() {
         return metodo;

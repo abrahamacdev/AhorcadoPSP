@@ -1,4 +1,4 @@
-package ahorcado.server.controllador;
+package ahorcado.server.controlador.manejadores;
 
 import ahorcado.server.modelo.Peticion;
 

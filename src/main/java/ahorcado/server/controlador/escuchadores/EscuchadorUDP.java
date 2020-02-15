@@ -1,5 +1,8 @@
-package ahorcado.server.controllador;
+package ahorcado.server.controlador.escuchadores;
 
+import ahorcado.server.controlador.Enrutador;
+import ahorcado.server.controlador.manejadores.IManejador;
+import ahorcado.server.utils.Constantes;
 import ahorcado.server.utils.Protocolo;
 import ahorcado.server.modelo.Peticion;
 import ahorcado.server.utils.Utils;
@@ -9,7 +12,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 
-public class ControladorUDP extends Thread {
+public class EscuchadorUDP extends Thread {
 
     private DatagramSocket buzon;
 
@@ -29,7 +32,7 @@ public class ControladorUDP extends Thread {
 
     private void crearBuzon(){
         try {
-            buzon = new DatagramSocket(Utils.PUERTO_UDP);
+            buzon = new DatagramSocket(Constantes.PUERTO_UDP);
         } catch (SocketException e) {
             e.printStackTrace();
         }

@@ -1,0 +1,83 @@
+estado = Comienzo
+
+peticion = nuevaPeticion()
+
+palabraCompleta = "platano"
+palabraIncompleta = "p_a_a_o"
+
+vidas = 5
+
+if estado == Comienzo {
+	peticion.responder("La palabra es " + palabraIncompleta)
+	estado = Cabeza
+}
+
+while(vidas >= 0){
+
+	resPeticion = peticion.leerRespuesta()
+	
+	char letra = null
+	string palabra = null
+
+	if(resPeticion.length == 1) letra = resPeticion.char(0)
+	else palabra = resPeticion
+
+
+	acierto = true
+
+	// Manejar letra
+	if letra != null{
+		// Ha dicho una letra que no se encuentra en la palabra completa
+		if(!palabraCompleta.contains(letra)){
+			acierto = false
+		}
+
+		// La letra se encuentra en la palabra completa
+		else {
+			// Añadimos la letra a la palabra incompleta
+			if(!palabraIncompleta.contains(letra)){
+				palabraIncompleta = añadirLetra(palabraIncompleta,palabra)
+			}
+	
+			// La letra ya se había añadido antes
+			else {
+				acierto = false;		
+			}
+		}	
+	}
+
+	// Manejar palabra
+	else if palabra != null {
+
+		// No ha acertado la palabra
+		if(palabraCompleta != palabra) {
+			acierto = false
+		};
+
+		// Ha ganado el juego
+		else {
+			juegoGanado(peticion,palabraCompleta,estado)
+			return
+		}	
+	}
+	
+
+	if(palabraCompleta == palabraIncompleta){
+		juegoGanado(peticion, palabraCompleta, estado)
+		return
+	}
+
+	if (!acierto){
+
+		// Restamos una vida por haber fallado
+		vidas--
+		estado++;
+	}
+
+	if (vidas >= 0){
+		resumen = obtenerResumen(estado)
+		peticion.enviarRespuesta(resumen)
+	}
+}
+
+juegoPerdido

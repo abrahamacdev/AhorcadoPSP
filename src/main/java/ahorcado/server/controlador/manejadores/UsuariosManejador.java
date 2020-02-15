@@ -1,9 +1,11 @@
-package ahorcado.server.controllador;
+package ahorcado.server.controlador.manejadores;
 
+import ahorcado.server.controlador.ControlLogueados;
 import ahorcado.server.modelo.Peticion;
 import ahorcado.server.modelo.Rol;
 import ahorcado.server.modelo.Usuario;
 import ahorcado.server.utils.Metodo;
+import ahorcado.server.utils.Par;
 import ahorcado.server.utils.Utils;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
@@ -12,8 +14,9 @@ import org.json.simple.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.UUID;
 
-public class UsuariosManager extends Thread implements IManejador {
+public class UsuariosManejador extends Thread implements IManejador {
 
     public static final HashMap<String, ArrayList<String>> peticionesEnrutables = new HashMap<>();
     private Session session;
@@ -28,7 +31,7 @@ public class UsuariosManager extends Thread implements IManejador {
     }
 
 
-    public UsuariosManager(){
+    public UsuariosManejador(){
         this.session = Utils.obtenerSession();
     }
 
@@ -188,12 +191,27 @@ public class UsuariosManager extends Thread implements IManejador {
             transaction.commit();
 
             if (usuario != null){
+
+                // Creamos el token que tendrá el usuario para realizar las siguientes peticiones como
+                // jugador logueado
+                UUID token = Utils.generarUUID();
+
+                Par usuarioToken = new Par(usuario,token);
+
                 // Guardamos el login del usuario
-                Juego.anadirJugadorLogueado(usuario);
-                respuesta.put("codigo","200");
-                respuesta.put("msg","");
-                peticion.setRespuesta(respuesta);
-                peticion.finalizar();
+                boolean res = ControlLogueados.anadirJugadorLogueado(usuarioToken);
+                if (res){
+                    respuesta.put("codigo","200");
+                    respuesta.put("msg","");
+                    respuesta.put("token", token.toString());
+                    peticion.setRespuesta(respuesta);
+                    peticion.finalizar();
+                }else {
+                    respuesta.put("codigo","400");
+                    respuesta.put("msg","No se ha podido hacer el login");
+                    peticion.setRespuesta(respuesta);
+                    peticion.finalizar();
+                }
             }
 
             // No se ha encontrado ningún usuario con esa combinación
@@ -242,9 +260,9 @@ public class UsuariosManager extends Thread implements IManejador {
             // Guardamos punto de control
             transaction.commit();
 
-            if (usuario != null && Juego.comprobarJugadorLogueado(usuario)){
+            if (usuario != null && ControlLogueados.comprobarJugadorLogueado(usuario)){
                 // Deslogueamos al usuario
-                Juego.eliminarJugadorLogueado(usuario);
+                ControlLogueados.eliminarJugadorLogueado(usuario);
                 respuesta.put("codigo","200");
                 respuesta.put("msg","");
                 peticion.setRespuesta(respuesta);
