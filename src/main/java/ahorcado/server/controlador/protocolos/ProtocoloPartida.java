@@ -14,6 +14,13 @@ public class ProtocoloPartida {
     private String palabraCompleta = Utils.obtenerPalabraRandom();
     private String palabraIncompleta = Utils.obtenerPalabraIncompleta(palabraCompleta);
 
+    public ProtocoloPartida(){}
+
+    public ProtocoloPartida(String palabraCompleta, String palabraIncompleta){
+        this.palabraCompleta = palabraCompleta;
+        this.palabraIncompleta = palabraIncompleta;
+    }
+
     public HashMap<String, Object> jugar(String palabraJugador){
 
         boolean acertado = true;

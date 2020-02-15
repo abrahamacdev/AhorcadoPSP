@@ -98,6 +98,43 @@ public class Peticion {
         return null;
     }
 
+    public void enviarMensaje(JSONObject mensaje){
+
+        // Respuesta a enviar en bytes
+        String mens = mensaje.toJSONString();
+
+        // Enviamos la respuesta a través del socket
+        if (protocolo == Protocolo.TCP){
+            Socket socket = (Socket) peticionCliente;
+
+            PrintWriter printWriter = null;
+            try {
+                printWriter = new PrintWriter(socket.getOutputStream(),true);
+                printWriter.println(mens);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }finally {
+                if (printWriter != null){
+                    printWriter.close();
+                }
+            }
+        }
+
+        // Enviamos el datagrampacket de vuelta por el buzon
+        else {
+            byte[] res = mens.getBytes();
+            DatagramPacket datagramPacket = (DatagramPacket) peticionCliente;
+            datagramPacket.setData(res);
+            try {
+                buzon.send(datagramPacket);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
     public void finalizar(){
 
         // Si no hay respuesta, creamos una por defecto
@@ -108,8 +145,7 @@ public class Peticion {
         }
 
         // Respuesta a enviar en bytes
-
-        byte[] res = respuesta.toJSONString().getBytes();
+        String res = respuesta.toJSONString();
 
         // Enviamos la respuesta a través del socket
         if (protocolo == Protocolo.TCP){
@@ -140,14 +176,14 @@ public class Peticion {
         // Enviamos el datagrampacket de vuelta por el buzon
         else {
             DatagramPacket datagramPacket = (DatagramPacket) peticionCliente;
-            datagramPacket.setData(res);
+            byte[] resBytes = res.getBytes();
+            datagramPacket.setData(resBytes);
             try {
-                synchronized (buzon){
-                    buzon.send(datagramPacket);
-                }
+                buzon.send(datagramPacket);
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            buzon.close();
         }
     }
 
@@ -213,29 +249,4 @@ public class Peticion {
     public void setRespuesta(JSONObject respuesta) {
         this.respuesta = respuesta;
     }
-
-    /*private void parsearDatos(String datos){
-
-        String[] troceado = datos.split("-");
-
-        // La petición como mínimo tiene que tener: método y acción,
-        // y como máximo: método, acción, argumentos
-        if (troceado.length < 2 || troceado.length > 3) return;
-
-        metodo = troceado[0];
-        accion = troceado[1];
-
-        String args = troceado[2];
-        String[] argsTroceados = args.split(",");
-
-        // Recorremos cada par clave/valor
-        for (String argClaveValor : argsTroceados){
-            String[] argCVTroceado = argClaveValor.split(":");
-
-            // La síntaxis tiene que ser "clave:valor"
-            if (argCVTroceado.length == 2){
-                argumentos.put(argCVTroceado[0], argCVTroceado[1]);
-            }
-        }
-    }*/
 }

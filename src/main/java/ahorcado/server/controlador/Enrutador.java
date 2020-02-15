@@ -1,6 +1,7 @@
 package ahorcado.server.controlador;
 
 import ahorcado.server.controlador.manejadores.PartidaManejador;
+import ahorcado.server.controlador.manejadores.PartidaMultijugadorManejador;
 import ahorcado.server.controlador.manejadores.UsuariosManejador;
 import ahorcado.server.controlador.manejadores.IManejador;
 import ahorcado.server.modelo.Peticion;
@@ -14,6 +15,7 @@ public class Enrutador {
     private final ArrayList<Class<? extends IManejador>> manejadores = new ArrayList<Class<? extends IManejador>>(){{
         add(UsuariosManejador.class);
         add(PartidaManejador.class);
+        add(PartidaMultijugadorManejador.class);
     }};
 
     public synchronized IManejador enrutar(Peticion peticion){

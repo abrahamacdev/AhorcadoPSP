@@ -6,8 +6,6 @@ import ahorcado.server.utils.Utils;
 import ahorcado.server.vista.ServerMain;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -15,46 +13,41 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.*;
 
-public class Main {
+public class JugadorDos {
 
     public static void main(String[] args){
 
-        Main main = new Main();
-
-        // Levantamos el servidor
-        ServerMain.levantarServidor();
-
-
-
+        JugadorDos jugadorDos = new JugadorDos();
 
         /* --- UDP --- */
         // Registramos un nuevo usuario
-        //main.realizarRegistroCliente();
+        //jugadorDos.realizarRegistroCliente();
 
         // Nos logueamos/deslogueamos con el usuario existente
-        String token = main.realizarLoginCliente();
-        //main.realizarLogoutCliente();
+        String token = jugadorDos.realizarLoginCliente();
+        //jugadorDos.realizarLogoutCliente();
         /* ----------- */
 
 
 
 
         /* --- TCP --- */
-        // Comenzamos una nueva partida
-        //main.comenzarNuevaPartida(token);
+        jugadorDos.mostrarPartidasDisponibles(token);
         /* ----------- */
     }
+
+
 
     public void realizarRegistroCliente(){
 
         InetAddress inetAddress = obtenerDireccionLocal();
 
         JSONObject jsonPeticion = new JSONObject();
-        jsonPeticion.put("metodo",Metodo.POST.name());
+        jsonPeticion.put("metodo", Metodo.POST.name());
         jsonPeticion.put("accion","registro");
 
         JSONObject jsonArgs = new JSONObject();
-        jsonArgs.put("nombre","Abraham");
+        jsonArgs.put("nombre","Juan");
         jsonArgs.put("contrasenia","1234");
 
         jsonPeticion.put("args", jsonArgs);
@@ -76,7 +69,7 @@ public class Main {
         jsonPeticion.put("accion","login");
 
         JSONObject jsonArgs = new JSONObject();
-        jsonArgs.put("nombre","Abraham");
+        jsonArgs.put("nombre","Juan");
         jsonArgs.put("contrasenia","1234");
 
         jsonPeticion.put("args", jsonArgs);
@@ -99,7 +92,7 @@ public class Main {
         jsonPeticion.put("accion","logout");
 
         JSONObject jsonArgs = new JSONObject();
-        jsonArgs.put("nombre","Abraham");
+        jsonArgs.put("nombre","Juan");
 
         jsonPeticion.put("args", jsonArgs);
 
@@ -110,7 +103,7 @@ public class Main {
         }
     }
 
-    public void comenzarNuevaPartida(String token){
+    public void mostrarPartidasDisponibles(String token){
 
         Socket conexion = crearClientSocket();
         PrintWriter printWriter = obtenerPrintWriterSocket(conexion);
@@ -121,7 +114,7 @@ public class Main {
 
         JSONObject datosPeticion = new JSONObject();
         datosPeticion.put("metodo", Metodo.POST.name());
-        datosPeticion.put("accion", "nuevaPartida");
+        datosPeticion.put("accion", "obtenerPartidasMultijugador");
         datosPeticion.put("args", args);
 
         // Enviamos los datos de la petición
@@ -135,33 +128,16 @@ public class Main {
         long codigo = (long) resEstablecimientoConexion.get("codigo");
         if (codigo == 200){
 
-            BufferedReader readerJugador = new BufferedReader(new InputStreamReader(System.in));
-            try {
+            JSONArray partidas = (JSONArray) resEstablecimientoConexion.get("partidas");
+            System.out.println("Hay " + partidas.size() + " partidas disponibles");
+            for (Object partida : partidas){
 
-                boolean partidaFinalizada = false;
-                while (!partidaFinalizada) {
-
-                    // Leemos la palabra de entrada
-                    System.out.println("Introduzca una letra o palabra");
-                    String entrada = readerJugador.readLine();
-
-                    // Creamos un json y se la enviamos al servidor
-                    JSONObject jsonObject = new JSONObject();
-                    jsonObject.put("palabra", entrada);
-                    printWriter.println(jsonObject.toJSONString());
-
-                    // Obtenemos el resultado de la palabra enviada
-                    JSONObject resPalabra = Utils.parsearString2Json(obtenerResEstablecimientoCon(bufferedReader));
-                    String msg = (String) resPalabra.get("msg");
-                    partidaFinalizada = (boolean) resPalabra.get("finalizada");
-
-                    System.out.println(msg);
-                }
-
-            }catch (Exception e){
-                e.printStackTrace();
+                JSONObject partidaJson = (JSONObject) partida;
+                System.out.println("Id partida -> \'" + partidaJson.get("id") + "\'. Tiene \'" + partidaJson.get("numJugadores") + "\' jugadores esperando.");
             }
+
         }
+
     }
 
 
@@ -287,4 +263,5 @@ public class Main {
         return null;
     }
     /* ----------- */
+
 }

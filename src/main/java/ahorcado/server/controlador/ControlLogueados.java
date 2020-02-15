@@ -88,6 +88,14 @@ public class ControlLogueados {
 
     }
 
+    public static synchronized Usuario obtenerJugadorLogueadoPorToken(UUID token){
+
+        if (usuariosLogueados.containsKey(token)){
+            return usuariosLogueados.get(token);
+        }
+        return null;
+    }
+
     public static synchronized UUID comprobarJugadorLogueadoUUID(Usuario usuario){
         // Comprobamos si un cierto usuario está logueado
         for (UUID uuid : usuariosLogueados.keySet()){

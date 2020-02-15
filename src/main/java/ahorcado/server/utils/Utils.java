@@ -1,6 +1,5 @@
 package ahorcado.server.utils;
 
-import com.sun.security.ntlm.Server;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;

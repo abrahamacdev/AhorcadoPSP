@@ -5,8 +5,6 @@ import ahorcado.server.controlador.manejadores.IManejador;
 import ahorcado.server.modelo.Peticion;
 import ahorcado.server.utils.Constantes;
 import ahorcado.server.utils.Protocolo;
-import ahorcado.server.utils.Utils;
-import com.sun.security.ntlm.Server;
 
 import java.io.*;
 import java.net.DatagramPacket;
