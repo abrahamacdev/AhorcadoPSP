@@ -82,7 +82,7 @@ public class PartidaMultijugadorManejador extends Thread implements IManejador {
                         funcionAEjecutar = new Runnable() {
                             @Override
                             public void run() {
-                                //nuevaPartida(peticion);
+                                unirsePartidaMultijugador(peticion);
                             }
                         };
                         break;
@@ -203,4 +203,70 @@ public class PartidaMultijugadorManejador extends Thread implements IManejador {
         return;
     }
 
+    private void unirsePartidaMultijugador(Peticion peticion){
+
+        JSONObject resJson = new JSONObject();
+
+        // Comprobamos que la petición tenga un token
+        if(!peticion.getArgumentos().containsKey("token")){
+            resJson.put("codigo",400);
+            resJson.put("msg","No se ha enviado ningun token adjunto a la petición");
+            peticion.setRespuesta(resJson);
+            peticion.finalizar();
+            return;
+        }
+
+        // Comprobamos que tenga el id de la partida a la que se unirá
+        if (!peticion.getArgumentos().containsKey("idPartida")){
+            resJson.put("codigo",400);
+            resJson.put("msg","No se ha enviado el id de la partida a la que quiere unirse");
+            peticion.setRespuesta(resJson);
+            peticion.finalizar();
+            return;
+        }
+
+        // Obtenemos el token de los argumentos
+        UUID token = UUID.fromString(peticion.getArgumentos().get("token"));
+        if (!ControlLogueados.comprobarJugadorLogueado(token)){
+            resJson.put("codigo",400);
+            resJson.put("msg","El usuario no esta logueado");
+            peticion.setRespuesta(resJson);
+            peticion.finalizar();
+            return;
+        }
+
+        int idPartida = Integer.parseInt(peticion.getArgumentos().get("idPartida"));
+        Partida partida = ControlPartidas.getInstance().obtenerPartidaPorId(idPartida);
+        if (partida != null){
+
+            // Añadimos al jugador a la partida
+            Usuario usuario = ControlLogueados.obtenerJugadorLogueadoPorToken(token);
+            boolean anadido = partida.anadirJugador(usuario,peticion);
+
+            // Si se ha añadido al jugador a la partida...
+            if (anadido){
+                resJson.put("codigo",200);
+                resJson.put("msg","Se ha unido correctamente...");
+                peticion.enviarMensaje(resJson);
+                return;
+            }
+
+            // No nos hemos podido unir a la partida
+            else {
+                resJson.put("codigo",500);
+                resJson.put("msg","No se ha podido añadir a la partida");
+                peticion.setRespuesta(resJson);
+                peticion.finalizar();
+                return;
+            }
+        }
+
+        else {
+            resJson.put("codigo",500);
+            resJson.put("msg","No se ha encontrado ninguna partida con ese id o la partida ya ha empezado/acabado");
+            peticion.setRespuesta(resJson);
+            peticion.finalizar();
+            return;
+        }
+    }
 }

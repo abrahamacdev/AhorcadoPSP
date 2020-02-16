@@ -3,7 +3,6 @@ package ahorcado.cliente;
 import ahorcado.server.utils.Constantes;
 import ahorcado.server.utils.Metodo;
 import ahorcado.server.utils.Utils;
-import ahorcado.server.vista.ServerMain;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -12,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.*;
+import java.util.Scanner;
 
 public class JugadorDos {
 
@@ -33,6 +33,7 @@ public class JugadorDos {
 
         /* --- TCP --- */
         jugadorDos.mostrarPartidasDisponibles(token);
+        jugadorDos.unirnosAPartida(token);
         /* ----------- */
     }
 
@@ -121,7 +122,7 @@ public class JugadorDos {
         printWriter.println(datosPeticion.toJSONString());
 
         // Recibimos la respuesta del servidor
-        JSONObject resEstablecimientoConexion = Utils.parsearString2Json(obtenerResEstablecimientoCon(bufferedReader));
+        JSONObject resEstablecimientoConexion = Utils.parsearString2Json(obtenerRespuestaServer(bufferedReader));
 
         System.out.println(resEstablecimientoConexion.get("msg"));
 
@@ -135,8 +136,38 @@ public class JugadorDos {
                 JSONObject partidaJson = (JSONObject) partida;
                 System.out.println("Id partida -> \'" + partidaJson.get("id") + "\'. Tiene \'" + partidaJson.get("numJugadores") + "\' jugadores esperando.");
             }
-
         }
+    }
+
+    public void unirnosAPartida(String token){
+
+        Scanner inputTerminal = new Scanner(System.in);
+        System.out.println("¿Cuál es el id de la partida a la que quieres unirte?");
+        String idPartida = inputTerminal.nextLine();
+
+        Socket conexion = crearClientSocket();
+        PrintWriter printWriter = obtenerPrintWriterSocket(conexion);
+        BufferedReader bufferedReader = obtenerBufferedReaderSocket(conexion);
+
+        JSONObject args = new JSONObject();
+        args.put("token", token);
+        args.put("idPartida", idPartida);
+
+        JSONObject datosPeticion = new JSONObject();
+        datosPeticion.put("metodo", Metodo.POST.name());
+        datosPeticion.put("accion", "unirsePartidaMultijugador");
+        datosPeticion.put("args", args);
+
+        // Enviamos los datos de la petición
+        printWriter.println(datosPeticion.toJSONString());
+
+        // Recibimos la respuesta del servidor
+        JSONObject resEstablecimientoConexion = Utils.parsearString2Json(obtenerRespuestaServer(bufferedReader));
+        System.out.println(resEstablecimientoConexion.get("msg"));
+
+        // Esperamos a que nos avisen de que la partida va a comenzar
+        JSONObject resComienzoPartida = Utils.parsearString2Json(obtenerRespuestaServer(bufferedReader));
+        System.out.println(resComienzoPartida.get("msg"));
 
     }
 
@@ -251,7 +282,7 @@ public class JugadorDos {
         return null;
     }
 
-    public static String obtenerResEstablecimientoCon(BufferedReader bufferedReader){
+    public static String obtenerRespuestaServer(BufferedReader bufferedReader){
 
         try {
             String datos = bufferedReader.readLine();

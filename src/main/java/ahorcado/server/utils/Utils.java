@@ -7,6 +7,8 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import java.io.*;
+import java.net.Socket;
 import java.util.*;
 
 public class Utils {
@@ -133,5 +135,23 @@ public class Utils {
         }
 
         return false;
+    }
+
+    public synchronized static PrintWriter obtenerWriterDeSocket(Socket socket){
+        try {
+            return new PrintWriter(new OutputStreamWriter(socket.getOutputStream()), true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public synchronized static BufferedReader obtenerReaderDeSocket(Socket socket){
+        try {
+            return new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

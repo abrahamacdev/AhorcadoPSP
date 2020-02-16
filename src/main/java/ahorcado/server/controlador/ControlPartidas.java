@@ -3,8 +3,10 @@ package ahorcado.server.controlador;
 import ahorcado.server.modelo.Partida;
 import ahorcado.server.modelo.Peticion;
 import ahorcado.server.modelo.Usuario;
+import ahorcado.server.utils.Par;
 
 import java.util.ArrayList;
+import java.util.Optional;
 
 public class ControlPartidas implements PartidaChangeListener {
 
@@ -47,6 +49,17 @@ public class ControlPartidas implements PartidaChangeListener {
         return null;
     }
 
+    public synchronized Partida obtenerPartidaPorId(int id){
+        Optional<Partida> optPartida = partidasEsperando.stream()
+                .filter((partida) -> partida.getId() == id)
+                .findFirst();
+
+        if (optPartida.isPresent()){
+            return optPartida.get();
+        }
+        return null;
+    }
+
 
     public void onPartidaEsperando(Partida partida) {
         synchronized (partidasEsperando){
@@ -74,11 +87,12 @@ public class ControlPartidas implements PartidaChangeListener {
         }
     }
 
-    public ArrayList<Partida> getPartidasCreadas() {
+
+    public synchronized ArrayList<Partida> getPartidasCreadas() {
         return partidasCreadas;
     }
 
-    public ArrayList<Partida> getPartidasEsperando(){
+    public synchronized ArrayList<Partida> getPartidasEsperando(){
         return partidasEsperando;
     }
 }
